@@ -1,81 +1,137 @@
-# Lab : Intégration FortiGate et Cisco avec GNS3
+🔐 Lab GNS3 – Intégration FortiGate HA & Cisco Routing
 
-Ce lab vise à configurer une topologie réseau intégrant des **FortiGate** et des **routeurs Cisco** pour simuler un environnement réseau sécurisé. Il couvre la configuration de base des équipements, la configuration des interfaces, le routage, et les politiques de sécurité.
+📌 Objectif
 
-## Topologie du Réseau
+Ce lab a pour objectif de simuler une architecture sécurisée intégrant :
 
-![Topologie Globale](images/topologie_globale.png)
+2 x Fortinet FortiGate VM en High Availability (HA Active-Passive)
 
-### Adressage IP
+Des routeurs Cisco Systems (CSR / IOU)
 
-| Équipement | Interface | Adresse IP       | Masque          |
-|------------|-----------|------------------|-----------------|
-| FGT1       | Port1     | 192.168.0.1      | 255.255.255.0   |
-| FGT1       | Port2     | 192.168.2.1      | 255.255.255.0   |
-| FGT2       | Port1     | 192.168.0.2      | 255.255.255.0   |
-| FGT2       | Port2     | 192.168.2.2      | 255.255.255.0   |
-| R1         | e0/0      | 192.168.0.254    | 255.255.255.0   |
-| R1         | e0/1      | 10.0.0.1         | 255.255.255.0   |
-| IOU1       | e0/0      | 192.168.0.253    | 255.255.255.0   |
-| IOU2       | e0/0      | 192.168.2.253    | 255.255.255.0   |
-| PC1        | e0        | 10.0.0.2         | 255.255.255.0   |
-| PC2        | e0        | 192.168.2.2      | 255.255.255.0   |
+Des hôtes simulés via VPCS
 
-### Passerelles par Défaut
-- **PC1** : 10.0.0.1
-- **PC2** : 192.168.2.1
-## Matériel et Logiciels Utilisés
+Il couvre :
 
-- **GNS3** : Pour simuler les équipements réseau.
-- **FortiGate VM (VM64-KVM)** : Pour les politiques de sécurité et le filtrage.
-- **Routeurs Cisco (IOU, CSR1000v)** : Pour le routage et la connectivité.
-- **VPCS** : Pour simuler les PCs.
-### Configuration de FGT1
+Configuration des interfaces
 
-1. **Configurer les interfaces** :
-   ```bash
-   config system interface
-   edit "Port1"
-       set ip 192.168.0.1 255.255.255.0
-       set allowaccess ping https ssh
-   next
-   edit "Port2"
-       set ip 192.168.2.1 255.255.255.0
-       set allowaccess ping https ssh
-   next
-   end
-config router static
-edit 1
-    set dst 10.0.0.0 255.255.255.0
-    set gateway 192.168.0.254
-next
-end
+Routage statique
+
+Mise en place HA FortiGate
+
+Vérification des flux
+
+Debug avancé (flow inspection)
+
+🗺️ Topologie
+
+🔎 Architecture logique
+        PC1 (10.0.0.2)
+               |
+              R1
+               |
+        192.168.0.0/24
+          |         |
+        FGT1      FGT2
+          |         |
+        192.168.2.0/24
+               |
+              IOU2
+               |
+              PC2
+🌐 Plan d’Adressage
+Équipement	Interface	Adresse IP	Rôle
+FGT1	port1	192.168.0.1/24	WAN
+FGT1	port2	192.168.2.1/24	LAN
+FGT2	port1	192.168.0.2/24	WAN
+FGT2	port2	192.168.2.2/24	LAN
+R1	e0/0	192.168.0.254/24	Vers FortiGate
+R1	e0/1	10.0.0.1/24	LAN PC1
+IOU2	e0/0	192.168.2.253/24	LAN PC2
+PC1	e0	10.0.0.2/24	Client
+PC2	e0	192.168.2.100/24	Client
+🔹 Passerelles par défaut
+
+PC1 → 10.0.0.1
+
+PC2 → 192.168.2.1 (VIP HA)
+
+🛠️ Environnement
+
+GNS3
+
+FortiGate VM64-KVM
+
+Cisco CSR1000v / IOU
+
+VPCS
+
+🔥 Configuration FortiGate
+1️⃣ Configuration Interfaces – FGT1
 config system interface
-edit "Port1"
-    set ip 192.168.0.2 255.255.255.0
-    set allowaccess ping https ssh
-next
-edit "Port2"
-    set ip 192.168.2.2 255.255.255.0
-    set allowaccess ping https ssh
-next
+    edit "port1"
+        set ip 192.168.0.1 255.255.255.0
+        set allowaccess ping https ssh
+    next
+    edit "port2"
+        set ip 192.168.2.1 255.255.255.0
+        set allowaccess ping https ssh
+    next
 end
+2️⃣ Routage Statique
 config router static
-edit 1
-    set dst 10.0.0.0 255.255.255.0
-    set gateway 192.168.0.254
-next
+    edit 1
+        set dst 10.0.0.0 255.255.255.0
+        set gateway 192.168.0.254
+    next
 end
+🔁 Configuration HA (Active-Passive)
+Sur FGT1 (Primary)
+config system ha
+    set mode a-p
+    set group-name "FGT-HA-LAB"
+    set password FortiHA123
+    set hbdev "port3" 50
+    set priority 200
+end
+Sur FGT2 (Secondary)
+config system ha
+    set mode a-p
+    set group-name "FGT-HA-LAB"
+    set password FortiHA123
+    set hbdev "port3" 50
+    set priority 100
+end
+✅ Vérification HA
+get system ha status
+execute ha status
+get system performance status
 
+Résultat attendu :
 
+FGT1 → Master
 
----
+FGT2 → Slave
 
-##### **Routeurs Cisco (R1, IOU1, IOU2)**
-```markdown
-### Configuration de R1
+Synchronisation : OK
 
-```bash
+🔐 Configuration Policy Firewall
+
+Autoriser le trafic LAN ↔ WAN :
+
+config firewall policy
+    edit 1
+        set name "LAN_to_WAN"
+        set srcintf "port2"
+        set dstintf "port1"
+        set srcaddr "all"
+        set dstaddr "all"
+        set action accept
+        set schedule "always"
+        set service "ALL"
+        set nat enable
+    next
+end
+🔀 Configuration Routeur Cisco R1
 enable
 configure terminal
 hostname R1
@@ -88,29 +144,9 @@ interface Ethernet0/1
  ip address 10.0.0.1 255.255.255.0
  no shutdown
 
-ip route 192.168.2.0 255.255.255.0 192.168.0.2
+ip route 192.168.2.0 255.255.255.0 192.168.0.1
 end
-
-
-Configuration de IOU1
-bash
-Copier
-
-enable
-configure terminal
-hostname IOU1
-
-interface Ethernet0/0
- ip address 192.168.0.253 255.255.255.0
- no shutdown
-
-ip route 0.0.0.0 0.0.0.0 192.168.0.1
-end
-
-Configuration de IOU2
-bash
-Copier
-
+🔀 Configuration IOU2
 enable
 configure terminal
 hostname IOU2
@@ -121,92 +157,54 @@ interface Ethernet0/0
 
 ip route 0.0.0.0 0.0.0.0 192.168.2.1
 end
+🧪 Tests de Connectivité
+Depuis PC1
+ping 192.168.2.100
+Vérification Table de Routage
 
-Copier
-
----
-
-##### **Configuration des PCs (VPCS)**
-```markdown
-### Configuration de PC1 et PC2
-
-Pour PC1 (dans VPCS) :
-```bash
-ip 10.0.0.2/24 10.0.0.1
-save
-
-Pour PC2 (dans VPCS) :
-bash
-Copier
-
-ip 192.168.2.2/24 192.168.2.1
-save
-
-Copier
-
----
-
-### **Vérification et Tests**
-```markdown
-## Vérification et Tests
-
-### Vérification des Interfaces
-Sur chaque équipement :
-```bash
-show interface
-
-Vérification des Routes
-Sur chaque routeur :
-bash
-Copier
-
-show ip route
-
-Vérification des Politiques de Sécurité sur FortiGate
-Sur FGT1 et FGT2 :
-bash
-Copier
+FortiGate :
 
 get router info routing-table all
+
+Cisco :
+
+show ip route
+🐞 Debug Avancé FortiGate (Flow Analysis)
+
+Très important pour comprendre le traitement des paquets :
+
+diagnose debug reset
 diagnose debug flow filter addr 10.0.0.2
 diagnose debug flow show function-name enable
 diagnose debug enable
 
-Tester la Connectivité entre PC1 et PC2
-Depuis PC1 :
-bash
-Copier
+Puis lancer un ping.
 
-ping 192.168.2.2
+Pour arrêter :
 
-Vérification des Connexions HA sur FortiGate
-Sur FGT1 et FGT2 :
-bash
-Copier
+diagnose debug disable
+🎯 Points Clés Pédagogiques
 
-execute ha status
-get system ha status
-get system performance status
+Compréhension du fonctionnement HA Active/Passive
 
-Copier
+Synchronisation configuration
 
----
+Rôle des priorités
 
-### **Défis Supplémentaires**
-```markdown
-## Défis Supplémentaires
+Impact d’un failover
 
-1. Configurer une politique de sécurité sur FortiGate pour bloquer le trafic ICMP entre PC1 et PC2.
-2. Configurer une politique NAT sur FortiGate pour permettre à PC1 d'accéder à Internet.
-3. Configurer un VPN entre FGT1 et FGT2.
+Routage statique inter-équipements
 
+Analyse de flux via debug
 
-Conclusion
-markdown
-Copier
+🧠 Conclusion
 
-## Conclusion
+Ce lab permet de :
 
-Ce lab permet de comprendre comment intégrer des équipements FortiGate et Cisco dans une topologie réseau. En suivant ces étapes, tu peux configurer des politiques de sécurité, du routage, et des connexions HA pour simuler un environnement réseau sécurisé.
+Déployer une architecture sécurisée hybride Cisco / FortiGate
 
+Implémenter une haute disponibilité
 
+Maîtriser le troubleshooting FortiGate
+
+Simuler un environnement proche d’une production entreprise
