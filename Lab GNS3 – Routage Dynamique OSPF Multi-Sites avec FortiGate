@@ -1,0 +1,192 @@
+📌 Objectif
+
+Ce lab démontre la mise en œuvre du protocole Open Shortest Path First (OSPF) dans une architecture multi-sites comprenant :
+
+Plusieurs Fortinet FortiGate
+
+Un routeur ISP central
+
+Des réseaux LAN distincts
+
+Interconnexion dynamique via Area 0
+
+🗺️ Topologie
+
+🏗️ Architecture Logique
+LAN Site A (192.168.1.0/24)
+        |
+      FGT2
+        |
+    20.20.20.0/24
+        |
+       ISP
+        |
+    40.40.40.0/24
+        |
+      FGT3
+        |
+LAN Site B (192.168.3.0/24)
+
+                |
+              FGT1
+                |
+          192.168.2.0/24
+🌐 Plan d’Adressage
+Segment	Réseau
+LAN Site A	192.168.1.0/24
+LAN Site B	192.168.3.0/24
+LAN Site C	192.168.2.0/24
+FGT2 ↔ ISP	20.20.20.0/24
+ISP ↔ FGT3	40.40.40.0/24
+FGT1 ↔ ISP	30.30.30.0/24
+🧠 Logique Fonctionnelle
+🎯 But du protocole OSPF
+
+Permettre :
+
+L’apprentissage automatique des réseaux distants
+
+La convergence rapide en cas de panne
+
+L’élimination du routage statique
+
+Une architecture scalable multi-sites
+
+🔁 Sens du Trafic
+Exemple : PC1 (192.168.1.10) → PC6 (192.168.3.10)
+
+PC1 envoie vers sa gateway (FGT2)
+
+FGT2 consulte sa table OSPF
+
+Route apprise via ISP
+
+Transit par réseau 20.20.20.0
+
+ISP redirige vers FGT3 via 40.40.40.0
+
+FGT3 route vers LAN 192.168.3.0
+
+Le chemin est déterminé dynamiquement via l’algorithme SPF (Dijkstra).
+
+🔥 Configuration OSPF – FortiGate
+Sur FGT2 (Site A)
+config router ospf
+    set router-id 2.2.2.2
+
+    config area
+        edit 0.0.0.0
+        next
+    end
+
+    config network
+        edit 1
+            set prefix 192.168.1.0 255.255.255.0
+            set area 0.0.0.0
+        next
+        edit 2
+            set prefix 20.20.20.0 255.255.255.0
+            set area 0.0.0.0
+        next
+    end
+end
+Sur FGT3 (Site B)
+config router ospf
+    set router-id 3.3.3.3
+
+    config area
+        edit 0.0.0.0
+        next
+    end
+
+    config network
+        edit 1
+            set prefix 192.168.3.0 255.255.255.0
+            set area 0.0.0.0
+        next
+        edit 2
+            set prefix 40.40.40.0 255.255.255.0
+            set area 0.0.0.0
+        next
+    end
+end
+Sur FGT1 (Site C)
+config router ospf
+    set router-id 1.1.1.1
+
+    config area
+        edit 0.0.0.0
+        next
+    end
+
+    config network
+        edit 1
+            set prefix 192.168.2.0 255.255.255.0
+            set area 0.0.0.0
+        next
+        edit 2
+            set prefix 30.30.30.0 255.255.255.0
+            set area 0.0.0.0
+        next
+    end
+end
+🔁 Configuration ISP (Cisco)
+enable
+configure terminal
+router ospf 1
+ router-id 10.10.10.10
+
+ network 20.20.20.0 0.0.0.255 area 0
+ network 40.40.40.0 0.0.0.255 area 0
+ network 30.30.30.0 0.0.0.255 area 0
+end
+🔍 Vérifications
+Sur FortiGate
+get router info ospf neighbor
+get router info ospf database
+get router info routing-table all
+Sur Cisco ISP
+show ip ospf neighbor
+show ip route
+show ip ospf database
+🧪 Tests de Connectivité
+
+Depuis PC1 :
+
+ping 192.168.3.10
+
+Résultat attendu :
+
+Route apprise en OSPF
+
+Chemin via ISP
+
+Pas de route statique configurée
+
+🧠 Concepts Clés Démontrés
+
+Link-State Protocol
+
+LSAs (Type 1 & 2)
+
+Area 0 Backbone
+
+SPF Algorithm
+
+Convergence dynamique
+
+Route redistribution possible
+
+Métrique basée sur coût
+
+⚙️ Ce Que Ce Lab Prouve Techniquement
+
+Maîtrise du routage dynamique
+
+Architecture multi-firewalls
+
+Interconnexion inter-sites
+
+Bonne compréhension du forwarding path
+
+Debug OSPF sur FortiGate et Cisco
